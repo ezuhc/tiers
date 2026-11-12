@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tier Rankings</title>
+<style>
+:root{
+  --bg:#0c0f16; --panel:#131824; --panel2:#171d2b; --line:#232b3d; --text:#e7ebf3; --mute:#8b95a9; --accent:#5aa2f5;
+  --gold:#ffd23f; --silver:#cfd6e2; --bronze:#d98a4e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px 48px}
+header{padding:28px 0 14px}
+header .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+header h1{margin:4px 0 2px;font-size:30px;letter-spacing:-.01em}
+header .sub{color:var(--mute);font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12px;color:var(--mute)}
+.pill.stale{border-color:#7a5a1f;color:#e6b455}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px}
+.chip{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--mute);padding:6px 12px;border-radius:8px;font-size:13px;user-select:none}
+.chip:hover{color:var(--text);border-color:#33405c}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#06101f;font-weight:600}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px;position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 82%,transparent);padding:8px 0}
+.controls input,.controls select{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 12px;font:inherit;outline:none}
+.controls input{flex:1;min-width:200px}
+.controls input:focus,.controls select:focus{border-color:var(--accent)}
+.table{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:64px minmax(180px,1.1fr) 70px 2fr;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.row.mode{grid-template-columns:64px minmax(180px,1.1fr) 70px 1fr 120px}
+.row.head{border-top:0;background:var(--panel2);color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding:9px 14px}
+.row.hasrow{cursor:pointer}
+.row.hasrow:hover{background:#171e2e}
+.noregion .row{grid-template-columns:64px minmax(180px,1.1fr) 2fr}
+.noregion .row.mode{grid-template-columns:64px minmax(180px,1.1fr) 1fr 120px}
+.noregion .reg{display:none}
+.rank{font-weight:700;color:var(--mute);font-variant-numeric:tabular-nums}
+.rank.r1{color:var(--gold)} .rank.r2{color:var(--silver)} .rank.r3{color:var(--bronze)}
+.player{display:flex;align-items:center;gap:10px;min-width:0}
+.player img{width:32px;height:32px;border-radius:5px;background:#0a0d14;flex:none;image-rendering:pixelated}
+.player .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .pts{color:var(--mute);font-size:12px;font-weight:400;margin-left:6px}
+.reg{color:var(--mute);font-size:13px;letter-spacing:.04em}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:12px;background:color-mix(in srgb,var(--c) 14%,#0d111a);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);color:#dfe5f1;white-space:nowrap}
+.badge b{color:var(--c);letter-spacing:.02em}
+.badge.big{font-size:14px;padding:5px 11px}
+.rec{color:var(--mute);font-size:13px;font-variant-numeric:tabular-nums}
+.state{padding:38px 16px;text-align:center;color:var(--mute)}
+.state b{display:block;color:var(--text);font-size:16px;margin-bottom:4px}
+button.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+button.btn:hover:not(:disabled){border-color:var(--accent)}
+button.btn:disabled{opacity:.4;cursor:default}
+.pager{display:flex;gap:6px;justify-content:center;align-items:center;margin:16px 0;flex-wrap:wrap}
+.pager .pg{min-width:36px;text-align:center}
+.pager .pg.on{background:var(--accent);border-color:var(--accent);color:#06101f;font-weight:700}
+.skel{height:14px;border-radius:6px;background:linear-gradient(90deg,#1a2132,#232c42,#1a2132);background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.back{display:inline-block;margin:10px 0 14px;color:var(--mute);cursor:pointer}
+.back:hover{color:var(--text)}
+.profile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+.ph{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ph img{width:84px;height:84px;border-radius:10px;background:#0a0d14;image-rendering:pixelated}
+.ph h2{margin:0;font-size:26px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--mute)}
+.stat b{color:var(--text);font-size:15px;margin-left:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:18px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card .gm{font-weight:600;margin-bottom:8px}
+.card .line{display:flex;justify-content:space-between;color:var(--mute);font-size:13px;margin-top:6px}
+footer{color:var(--mute);font-size:12px;text-align:center;margin-top:30px}
+@media (max-width:720px){
+  header h1{font-size:24px}
+  .row,.row.mode,.noregion .row,.noregion .row.mode{grid-template-columns:44px 1fr auto;grid-template-areas:"rk pl rg" "bd bd bd";row-gap:8px;padding:12px}
+  .noregion .row,.noregion .row.mode{grid-template-columns:44px 1fr;grid-template-areas:"rk pl" "bd bd"}
+  .row.mode,.noregion .row.mode{grid-template-areas:"rk pl rg" "bd bd bd" "ex ex ex"}
+  .noregion .row.mode{grid-template-areas:"rk pl" "bd bd" "ex ex"}
+  .row.head{display:none}
+  .row>.rank{grid-area:rk}.row>.player{grid-area:pl}.row>.reg{grid-area:rg}.row>.badges,.row>.rec{grid-area:bd}.row>.ex{grid-area:ex}
+  .badge{font-size:11px;padding:2px 6px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand" id="brand">Rankings</div>
+    <h1 id="title">Tier Rankings</h1>
+    <div class="sub"><span id="subtitle">Live rankings</span><span class="pill" id="season" hidden></span><span class="pill" id="updated" hidden></span></div>
+  </header>
+  <div id="app"></div>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+// If you host this file on another website, put your server address here, e.g. "http://123.45.67.89:8080"
+const API_BASE = "";
+
+// Static hosting (GitHub Pages): the plugin sets this to "data.json" when it uploads the site. Leave empty when the plugin serves the page itself.
+const STATIC_DATA = "data.json";
+
+/*STATIC-SHIM-START*/
+if (STATIC_DATA) (function(){
+  const realFetch = window.fetch.bind(window);
+  let DATA = null, loading = null;
+  function jr(code, obj){ return new Response(JSON.stringify(obj), {status: code, headers: {"Content-Type": "application/json"}}); }
+  function ensure(){
+    if (DATA && Date.now() - DATA._t < 60000) return Promise.resolve(DATA);
+    if (!loading) {
+      loading = realFetch(STATIC_DATA + "?t=" + Math.floor(Date.now() / 60000))
+        .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(d => { d._t = Date.now(); DATA = d; loading = null; return d; })
+        .catch(e => { loading = null; throw e; });
+    }
+    return loading;
+  }
+  const idx = (D, name) => D.tierNames.indexOf(name);
+  window.fetch = async function(url, opts){
+    const u = new URL(String(url), location.href);
+    const at = u.pathname.indexOf("/api/");
+    if (at < 0) return realFetch(url, opts);
+    const D = await ensure();
+    const tail = u.pathname.slice(at + 5), q = u.searchParams;
+    if (tail === "meta") {
+      return jr(200, {title: D.title, subtitle: D.subtitle, updateMinutes: D.updateMinutes, staleAfterMinutes: D.staleAfterMinutes, ready: true,
+        season: D.season, pointsFrom: D.pointsFrom, lastUpdated: D.generatedAt, totalPlayers: D.players.length,
+        gamemodes: D.gamemodes, regions: D.regions, tierNames: D.tierNames});
+    }
+    if (tail === "leaderboard") {
+      const mode = (q.get("gamemode") || "").toLowerCase(), search = (q.get("search") || "").trim().toLowerCase().slice(0, 32), region = (q.get("region") || "").trim();
+      const limit = Math.max(1, Math.min(100, parseInt(q.get("limit") || "50", 10) || 50)), page = Math.max(1, parseInt(q.get("page") || "1", 10) || 1);
+      let list = D.players;
+      if (mode) {
+        const t = p => p.tiers.find(x => x.gamemode === mode);
+        list = D.players.filter(p => t(p)).sort((a, b) => {
+          const x = t(a), y = t(b);
+          return idx(D, y.currentTier) - idx(D, x.currentTier) || idx(D, y.peakTier) - idx(D, x.peakTier) || y.wins - x.wins || a.username.toLowerCase().localeCompare(b.username.toLowerCase());
+        }).map((p, i) => Object.assign({}, p, {rank: i + 1, tiers: p.tiers.filter(x => x.gamemode === mode)}));
+      }
+      list = list.filter(p => (!region || p.region.toLowerCase() === region.toLowerCase()) && (!search || p.username.toLowerCase().includes(search)));
+      const from = Math.min((page - 1) * limit, list.length), to = Math.min(from + limit, list.length);
+      return jr(200, {ready: true, players: list.slice(from, to), pagination: {page, limit, total: list.length, hasNext: to < list.length}, lastUpdated: D.generatedAt});
+    }
+    if (tail.startsWith("player/")) {
+      const n = decodeURIComponent(tail.slice(7)).toLowerCase();
+      const p = D.players.find(x => x.username.toLowerCase() === n);
+      return p ? jr(200, Object.assign({}, p, {globalRank: p.rank})) : jr(404, {error: "player not found"});
+    }
+    return jr(404, {error: "not found"});
+  };
+})();
+/*STATIC-SHIM-END*/
+
+const TIER_COLORS = {
+  ST6:"#4b5563", LT6:"#5b6472", MT6:"#6b7280", HT6:"#7d8794",
+  LT5:"#8b95a3", MT5:"#9aa4b2", HT5:"#aab3bf",
+  LT4:"#3fae6a", MT4:"#4cc37b", HT4:"#63d98f",
+  LT3:"#3f8de8", MT3:"#5aa2f5", HT3:"#7ab6ff",
+  LT2:"#8e5be0", MT2:"#a272f0", HT2:"#b98bff",
+  LT1:"#f08a24", MT1:"#f5a13a", HT1:"#ffd23f"
+};
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => { n = Number(n); return Number.isInteger(n) ? String(n) : String(+n.toFixed(2)); };
+
+let META = null;
+const state = { search:"", region:"", mode:"", page:1 };
+let debounce = null, reqId = 0;
+
+async function api(path){
+  const r = await fetch(API_BASE + path);
+  if(!r.ok){ const e = new Error("HTTP "+r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+
+function readUrl(){
+  const q = new URLSearchParams(location.search);
+  state.search = q.get("search") || "";
+  state.region = q.get("region") || "";
+  state.mode = q.get("gamemode") || "";
+  state.page = Math.max(1, parseInt(q.get("page")||"1",10) || 1);
+}
+function writeUrl(replace){
+  const q = new URLSearchParams();
+  if(state.search) q.set("search", state.search);
+  if(state.region) q.set("region", state.region);
+  if(state.mode) q.set("gamemode", state.mode);
+  if(state.page>1) q.set("page", state.page);
+  const url = location.pathname + (q.toString() ? "?"+q : "");
+  history[replace?"replaceState":"pushState"](null, "", url);
+}
+
+function badge(t, big){
+  const c = TIER_COLORS[t.currentTier] || "#6b7280";
+  const tip = `${t.displayName} — Current: ${t.currentTier}\nPeak: ${t.peakTier}`;
+  return `<span class="badge${big?" big":""}" style="--c:${c}" title="${esc(tip)}">${esc(t.displayName.toLowerCase())} <b>${esc(t.currentTier)}</b></span>`;
+}
+const PH = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8" fill="#2a3247"/><rect x="2" y="2" width="4" height="4" fill="#4b5774"/></svg>');
+function avatar(p, size){
+  return `<img src="${esc(p.avatarUrl)}" width="${size}" height="${size}" loading="lazy" alt="" onerror="this.onerror=null;this.src=PH">`;
+}
+function ago(iso){
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime())/1000);
+  if(s < 60) return "just now";
+  const m = Math.floor(s/60); if(m < 60) return m + " min ago";
+  const h = Math.floor(m/60); return h + " h ago";
+}
+
+function setHeader(){
+  document.title = META.title;
+  $("#title").textContent = META.title;
+  $("#brand").textContent = "Rankings";
+  $("#subtitle").textContent = META.subtitle || "";
+  if(META.ready){
+    const s = $("#season"); s.hidden = false; s.textContent = "Season " + META.season;
+    const u = $("#updated"); u.hidden = false;
+    u.textContent = "Updated " + ago(META.lastUpdated);
+    u.className = "pill" + ((Date.now() - new Date(META.lastUpdated).getTime()) > (META.staleAfterMinutes || META.updateMinutes*3)*60000 ? " stale" : "");
+  }
+  $("#foot").textContent = META.ready ? `${META.totalPlayers} ranked players · refreshed every ${META.updateMinutes} min` : "";
+}
+
+/* ------------------------------ leaderboard ------------------------------ */
+function renderShell(){
+  const hasRegions = META.regions && META.regions.length;
+  const chips = [`<span class="chip${state.mode===""?" on":""}" data-mode="">Overall</span>`]
+    .concat(META.gamemodes.map(g => `<span class="chip${state.mode===g.slug?" on":""}" data-mode="${esc(g.slug)}">${esc(g.displayName)}</span>`)).join("");
+  const regionSel = hasRegions ? `<select id="region"><option value="">All regions</option>${META.regions.map(r=>`<option${state.region===r?" selected":""}>${esc(r)}</option>`).join("")}</select>` : "";
+  $("#app").innerHTML = `
+    <div class="chips" id="chips">${chips}</div>
+    <div class="controls"><input id="search" type="search" placeholder="Search a username…" value="${esc(state.search)}" autocomplete="off">${regionSel}</div>
+    <div class="table ${hasRegions?"":"noregion"}" id="tbl"></div>
+    <div class="pager" id="pager"></div>`;
+  $("#chips").onclick = e => { const c = e.target.closest(".chip"); if(!c) return; state.mode = c.dataset.mode; state.page = 1; writeUrl(); renderShell(); load(); };
+  $("#search").oninput = e => { clearTimeout(debounce); debounce = setTimeout(()=>{ state.search = e.target.value.trim(); state.page = 1; writeUrl(true); load(); }, 300); };
+  const rs = $("#region"); if(rs) rs.onchange = e => { state.region = e.target.value; state.page = 1; writeUrl(); load(); };
+}
+
+function skeleton(){
+  let h = headRow();
+  for(let i=0;i<8;i++) h += `<div class="row"><div class="skel" style="width:30px"></div><div class="skel" style="width:70%"></div><div class="skel reg" style="width:30px"></div><div class="skel" style="width:85%"></div></div>`;
+  return h;
+}
+function headRow(){
+  return state.mode
+    ? `<div class="row head mode"><div>#</div><div>Player</div><div class="reg">Region</div><div>Tier</div><div>Record</div></div>`
+    : `<div class="row head"><div>#</div><div>Player</div><div class="reg">Region</div><div>Tiers</div></div>`;
+}
+
+async function load(){
+  const id = ++reqId;
+  const tbl = $("#tbl"); if(!tbl) return;
+  tbl.innerHTML = skeleton();
+  $("#pager").innerHTML = "";
+  const q = new URLSearchParams({ page: state.page, limit: 50 });
+  if(state.search) q.set("search", state.search);
+  if(state.region) q.set("region", state.region);
+  if(state.mode) q.set("gamemode", state.mode);
+  try{
+    const d = await api("/api/leaderboard?" + q);
+    if(id !== reqId) return;
+    if(!d.ready){ tbl.innerHTML = `<div class="state"><b>Rankings are loading…</b>The server is still collecting data. Try again in a moment.</div>`; return; }
+    if(!d.players.length){
+      tbl.innerHTML = state.search
+        ? `<div class="state"><b>No player found for “${esc(state.search)}”.</b>Check the spelling or try their exact Minecraft username.</div>`
+        : `<div class="state"><b>No players found.</b>Try a different filter.</div>`;
+      return;
+    }
+    let h = headRow();
+    for(const p of d.players){
+      const rc = p.rank<=3 ? " r"+p.rank : "";
+      let cell, extra = "";
+      if(state.mode){
+        const t = p.tiers[0];
+        cell = `<div class="badges">${badge(t,true)} <span class="rec" title="Peak ${esc(t.peakTier)}">peak ${esc(t.peakTier)}</span></div>`;
+        extra = `<div class="rec ex">${t.wins}W · ${t.losses}L${t.streak>1?` · 🔥${t.streak}`:""}</div>`;
+      } else {
+        cell = `<div class="badges">${p.tiers.map(t=>badge(t)).join("")}</div>`;
+      }
+      h += `<a class="row hasrow${state.mode?" mode":""}" href="?player=${encodeURIComponent(p.username)}" data-u="${esc(p.username)}">
+        <div class="rank${rc}">#${p.rank}</div>
+        <div class="player">${avatar(p,32)}<span class="nm">${esc(p.username)}</span>${state.mode?"":`<span class="pts" title="Total points">${fmt(p.totalPoints)} pts</span>`}</div>
+        <div class="reg">${esc(p.region||"")}</div>${cell}${extra}</a>`;
+    }
+    tbl.innerHTML = h;
+    tbl.onclick = e => { const a = e.target.closest("a.row"); if(!a) return; e.preventDefault(); openPlayer(a.dataset.u, true); };
+    pager(d.pagination);
+    if(d.lastUpdated){ META.lastUpdated = d.lastUpdated; setHeader(); }
+  }catch(err){
+    if(id !== reqId) return;
+    tbl.innerHTML = `<div class="state"><b>Couldn’t load rankings.</b><button class="btn" id="retry">Retry</button></div>`;
+    $("#retry").onclick = load;
+  }
+}
+
+function pager(pg){
+  const pages = Math.max(1, Math.ceil(pg.total / pg.limit));
+  if(pages <= 1) { $("#pager").innerHTML = ""; return; }
+  const nums = new Set([1, pages, pg.page-1, pg.page, pg.page+1]);
+  const list = [...nums].filter(n=>n>=1&&n<=pages).sort((a,b)=>a-b);
+  let h = `<button class="btn" data-p="${pg.page-1}" ${pg.page<=1?"disabled":""}>Prev</button>`;
+  let last = 0;
+  for(const n of list){ if(n-last>1) h += `<span class="rec">…</span>`; h += `<button class="btn pg${n===pg.page?" on":""}" data-p="${n}">${n}</button>`; last = n; }
+  h += `<button class="btn" data-p="${pg.page+1}" ${!pg.hasNext?"disabled":""}>Next</button>`;
+  const el = $("#pager"); el.innerHTML = h;
+  el.onclick = e => { const b = e.target.closest("button[data-p]"); if(!b || b.disabled) return; state.page = +b.dataset.p; writeUrl(); load(); window.scrollTo({top:0,behavior:"smooth"}); };
+}
+
+/* -------------------------------- profile -------------------------------- */
+let boardQs = "";
+async function openPlayer(name, push){
+  if(push){ boardQs = location.search; history.pushState(null, "", location.pathname + "?player=" + encodeURIComponent(name)); }
+  const app = $("#app");
+  app.innerHTML = `<a class="back" id="back">← Back to leaderboard</a><div class="profile"><div class="skel" style="width:40%;height:28px"></div></div>`;
+  $("#back").onclick = goBoard;
+  try{
+    const p = await api("/api/player/" + encodeURIComponent(name));
+    const hours = Math.round(p.playSeconds/360)/10;
+    document.title = p.username + " · " + META.title;
+    const rc = p.globalRank<=3 ? " r"+p.globalRank : "";
+    app.innerHTML = `<a class="back" id="back">← Back to leaderboard</a>
+      <div class="profile">
+        <div class="ph">${avatar(p,84)}<div>
+          <h2>${esc(p.username)}</h2>
+          <div class="stats">
+            <span class="stat">Rank <b class="rank${rc}">#${p.globalRank}</b></span>
+            <span class="stat">Points <b>${fmt(p.totalPoints)}</b></span>
+            ${p.region?`<span class="stat">Region <b>${esc(p.region)}</b></span>`:""}
+            <span class="stat">Kills <b>${p.kills}</b></span><span class="stat">Deaths <b>${p.deaths}</b></span>
+            <span class="stat">Playtime <b>${hours} h</b></span>
+          </div></div></div>
+        <div class="grid">${p.tiers.map(t=>`<div class="card"><div class="gm">${esc(t.displayName)}</div>
+          <div>${badge(t,true)}</div>
+          <div class="line"><span>Peak</span><span>${esc(t.peakTier)}</span></div>
+          <div class="line"><span>Record</span><span>${t.wins}W · ${t.losses}L</span></div>
+          <div class="line"><span>Win streak</span><span>${t.streak}</span></div>
+          <div class="line"><span>Points</span><span>${fmt(t.points)}</span></div></div>`).join("")}</div>
+      </div>`;
+    $("#back").onclick = goBoard;
+  }catch(err){
+    app.innerHTML = `<a class="back" id="back">← Back to leaderboard</a><div class="profile"><div class="state"><b>${err.status===404?"Player not found.":"Couldn’t load this player."}</b>${err.status===404?"They may not have a tier yet.":""}</div></div>`;
+    $("#back").onclick = goBoard;
+  }
+}
+function goBoard(){ history.pushState(null, "", location.pathname + boardQs); route(); }
+
+/* -------------------------------- routing -------------------------------- */
+async function route(){
+  readUrl();
+  const pl = new URLSearchParams(location.search).get("player");
+  if(pl){ await openPlayer(pl, false); return; }
+  document.title = META.title;
+  if(!META.ready){ $("#app").innerHTML = `<div class="table"><div class="state"><b>Rankings are loading…</b>The server is still collecting data. Refresh in a moment.</div></div>`; return; }
+  renderShell(); load();
+}
+window.addEventListener("popstate", route);
+
+(async function init(){
+  try{
+    META = await api("/api/meta");
+    setHeader();
+    await route();
+  }catch(e){
+    $("#app").innerHTML = `<div class="table"><div class="state"><b>Couldn’t reach the server.</b>Check that the server is online and the EzTiers plugin is running.<br><br><button class="btn" onclick="location.reload()">Retry</button></div></div>`;
+  }
+  setInterval(async () => { try{ const m = await api("/api/meta"); const changed = m.lastUpdated !== META.lastUpdated; META = m; setHeader(); }catch(e){} }, 60000);
+})();
+</script>
+</body>
+</html>
